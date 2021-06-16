@@ -10,35 +10,63 @@ class Model(ABC):
     See the forward method for more information.
     """
 
-    obs_dim = None
-    act_dim = None
-
-    def __init__(self, sigma=1, seed=0):
+    def __init__(self, act_dim, obs_dim, sigma=1, seed=0):
         """
         bottom text
         """
         np.random.seed(seed)
-
+        self.act_dim = act_dim
+        self.obs_dim = obs_dim
         self.sigma = sigma
-        self.state = np.random.random(obs_dim)
+        self._state = np.random.random(self.obs_dim)
 
     @abstractmethod
-    def forward(self, input, state=None):
+    def forward(self, input=None, state=None):
         """
         This method implements the forward dynamics of the system.
         """
         pass
 
-    def _state(self):
-        return self.state
+    def state(self):
+        return self._state
 
 class SampleModel(Model):
-    obs_dim = 1
-    act_dim = 1
+    """
+    A simple model that implements a noisy linear relationship.
+    """
 
-    def forward(self, input, state=None):
+    def forward(self, input=None, state=None):
         m = 3
 
-        state_1 =  self.state * m + input
+        if state is None:
+            state_0 = self._state
+        else:
+            state_0 = state
 
-        return state_1 + np.random.normal() 
+        state_1 = state_0 * m
+        state_1 = state_1 + np.random.normal(0, self.sigma, self.obs_dim)
+
+        if state is None:
+            self._state = state_1
+        return state_0, state_1
+
+class Complex1DModel(Model):
+    """
+    A complex model with non-linear relationships
+    """
+
+    def forward(self, input=None, state=None):
+        if state is None:
+            state_0 = self._state
+        else:
+            state_0 = state
+
+        state_1 = 5 * state_0 ** 3 - 3 * state_0 ** 2 + state_0 + 20
+        state_1 = state_1 + np.random.normal(0, self.sigma, self.obs_dim)
+
+        if state is None:
+            self._state = state_1
+        return state_0, state_1
+
+def MSE_loss(x, y):
+    return np.mean((x - y).T @ (x - y))
